@@ -1,41 +1,111 @@
-import React, { useState } from 'react'
-import { Input, Button, Spin, Empty } from 'antd'
-import { SendOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
+import React, { useState, useRef, useEffect } from 'react'
+import { Input, Button, Spin, Empty, Avatar } from 'antd'
+import { SendOutlined, RobotOutlined, UserOutlined, LoadingOutlined } from '@ant-design/icons'
+import useChatStore from '../store/chatStore'
+import useSessionStore from '../store/sessionStore'
+import { sendMessage, getMessages } from '../api/chat'
+import { fetchStream } from '../api/stream'
 import './ChatArea.css'
 
-const MOCK_MESSAGES = [
-  { id: '1', role: 'user', content: '你好，我想查询一下上个月的销售数据' },
-  { id: '2', role: 'assistant', content: '好的，我来帮您查询上个月的销售数据。请问您想查看哪方面的数据？比如总体销售额、产品销量还是用户分析？' },
-  { id: '3', role: 'user', content: '看看总体销售额吧' },
-  { id: '4', role: 'assistant', content: '根据数据库中的数据，上个月（2026年4月）的总体销售额为 ¥549.95，其中 Product A 销量最高共5件，Product B 1件，Product C 1件。详细数据已生成可视化图表展示在右侧。' }
-]
+const TYPING_SPEED = 30
 
 function ChatArea() {
-  const [messages, setMessages] = useState(MOCK_MESSAGES)
+  const { messages, setMessages, addMessage, updateMessage, setLoading, setStreaming, clearMessages } = useChatStore()
+  const { currentSession } = useSessionStore()
   const [inputValue, setInputValue] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLocalLoading] = useState(false)
+  const [streaming, setLocalStreaming] = useState(false)
+  const messageListRef = useRef(null)
+  const streamControllerRef = useRef(null)
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return
-
-    const newMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: inputValue
+  useEffect(() => {
+    if (currentSession?.id) {
+      loadMessages(currentSession.id)
+    } else {
+      clearMessages()
     }
-    setMessages([...messages, newMessage])
-    setInputValue('')
-    setLoading(true)
+  }, [currentSession?.id])
 
-    setTimeout(() => {
-      const response = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '感谢您的提问！我正在分析您的问题，请稍候...'
-      }
-      setMessages(prev => [...prev, response])
-      setLoading(false)
-    }, 1000)
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const loadMessages = async (sessionId) => {
+    setLocalLoading(true)
+    try {
+      const data = await getMessages(sessionId)
+      setMessages(data)
+    } catch (error) {
+      console.error('Load messages error:', error)
+    } finally {
+      setLocalLoading(false)
+    }
+  }
+
+  const scrollToBottom = () => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight
+    }
+  }
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || !currentSession) return
+
+    const userMessage = {
+      id: `temp-${Date.now()}`,
+      session_id: currentSession.id,
+      role: 'user',
+      content: inputValue,
+      created_at: new Date().toISOString()
+    }
+
+    addMessage(userMessage)
+    setInputValue('')
+    setLocalLoading(true)
+
+    try {
+      const response = await sendMessage(currentSession.id, inputValue)
+      addMessage(response)
+      setLocalLoading(false)
+
+      setLocalStreaming(true)
+      setStreaming(true)
+
+      streamControllerRef.current = fetchStream(
+        currentSession.id,
+        (data) => {
+          if (data.type === 'message' && data.content) {
+            const lastMsg = messages[messages.length - 1]
+            if (lastMsg?.role === 'assistant' && !lastMsg.id.startsWith('temp')) {
+              updateMessage(lastMsg.id, { content: lastMsg.content + data.content })
+            }
+          }
+        },
+        (error) => {
+          console.error('Stream error:', error)
+          setLocalStreaming(false)
+          setStreaming(false)
+        },
+        () => {
+          setLocalStreaming(false)
+          setStreaming(false)
+        }
+      )
+    } catch (error) {
+      console.error('Send message error:', error)
+      setLocalLoading(false)
+      setLocalStreaming(false)
+      setStreaming(false)
+    }
+  }
+
+  const handleStopStream = () => {
+    if (streamControllerRef.current) {
+      streamControllerRef.current.abort()
+      streamControllerRef.current = null
+    }
+    setLocalStreaming(false)
+    setStreaming(false)
   }
 
   const handleKeyPress = (e) => {
@@ -45,39 +115,63 @@ function ChatArea() {
     }
   }
 
+  const renderMessage = (msg, index) => {
+    const isUser = msg.role === 'user'
+    const showAvatar = index === 0 || messages[index - 1]?.role !== msg.role
+
+    return (
+      <div 
+        key={msg.id} 
+        className={`message-item ${isUser ? 'user' : 'assistant'} ${showAvatar ? 'with-avatar' : ''}`}
+      >
+        <div className="message-avatar">
+          {isUser ? <UserOutlined /> : (streaming && index === messages.length ? <LoadingOutlined spin /> : <RobotOutlined />)}
+        </div>
+        <div className="message-content">
+          <div className="message-text">{msg.content}</div>
+          <div className="message-time">
+            {new Date(msg.created_at).toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentSession) {
+    return (
+      <div className="chat-area">
+        <div className="chat-header">
+          <h2>智能数据分析助手</h2>
+        </div>
+        <div className="message-list empty">
+          <Empty description="请先选择一个会话或创建新会话" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="chat-area">
       <div className="chat-header">
         <h2>智能数据分析助手</h2>
+        {streaming && (
+          <Button size="small" onClick={handleStopStream}>
+            停止生成
+          </Button>
+        )}
       </div>
 
-      <div className="message-list">
-        {messages.length === 0 ? (
+      <div className="message-list" ref={messageListRef}>
+        {messages.length === 0 && !loading ? (
           <Empty description="开始对话吧！" />
         ) : (
-          messages.map(msg => (
-            <div 
-              key={msg.id} 
-              className={`message-item ${msg.role === 'user' ? 'user' : 'assistant'}`}
-            >
-              <div className="message-avatar">
-                {msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-              </div>
-              <div className="message-content">
-                <div className="message-text">{msg.content}</div>
-                <div className="message-time">
-                  {new Date().toLocaleTimeString()}
-                </div>
-              </div>
-            </div>
-          ))
+          messages.map((msg, index) => renderMessage(msg, index))
         )}
         {loading && (
-          <div className="message-item assistant">
-            <div className="message-avatar"><RobotOutlined /></div>
+          <div className="message-item assistant loading">
+            <div className="message-avatar"><LoadingOutlined spin /></div>
             <div className="message-content">
-              <Spin size="small" />
-              <span style={{ marginLeft: 8 }}>AI 正在分析...</span>
+              <span>AI 正在分析...</span>
             </div>
           </div>
         )}
@@ -85,17 +179,19 @@ function ChatArea() {
 
       <div className="chat-input-area">
         <Input.TextArea
-          placeholder="请输入您的问题..."
+          placeholder="请输入您的问题... (Shift+Enter换行，Enter发送)"
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           autoSize={{ minRows: 1, maxRows: 4 }}
+          disabled={streaming}
         />
         <Button 
           type="primary" 
           icon={<SendOutlined />}
           onClick={handleSend}
-          disabled={!inputValue.trim()}
+          disabled={!inputValue.trim() || streaming}
+          loading={loading && !streaming}
         >
           发送
         </Button>
