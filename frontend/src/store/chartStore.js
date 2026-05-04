@@ -4,6 +4,7 @@ const useChartStore = create((set) => ({
   chartType: 'bar',
   chartData: null,
   chartOptions: null,
+  chartConfigs: null,
   loading: false,
   error: null,
 
@@ -13,11 +14,20 @@ const useChartStore = create((set) => ({
 
   setChartOptions: (chartOptions) => set({ chartOptions }),
 
+  setChartConfigs: (chartConfigs) => set({ chartConfigs }),
+
   setLoading: (loading) => set({ loading }),
 
   setError: (error) => set({ error }),
 
-  reset: () => set({ chartType: 'bar', chartData: null, chartOptions: null, loading: false, error: null })
+  reset: () => set({
+    chartType: 'bar',
+    chartData: null,
+    chartOptions: null,
+    chartConfigs: null,
+    loading: false,
+    error: null
+  })
 }))
 
 export default useChartStore

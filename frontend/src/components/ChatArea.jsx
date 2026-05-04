@@ -14,7 +14,7 @@ function ChatArea() {
   const { messages, setMessages, addMessage, updateMessage, clearMessages } = useChatStore()
   const { currentSession } = useSessionStore()
   const { setQueryResult, setSqlQuery } = useQueryResultStore()
-  const { setChartData, setChartOptions } = useChartStore()
+  const { setChartData, setChartOptions, setChartConfigs } = useChartStore()
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(false)
@@ -112,31 +112,88 @@ function ChatArea() {
         return
       }
 
-      if (keys.length === 1) {
-        const key = keys[0]
-        const value = firstRow[key]
+      const baseTitle = { text: sql || '查询结果', left: 'center' }
+      const labelKey = keys[0]
+      const valueKeys = keys.slice(1)
+
+      const chartConfigs = {}
+
+      if (valueKeys.length === 0) {
+        const key = labelKey
+        const allLabels = parsedResult.map((_, i) => `项${i + 1}`)
         const allValues = parsedResult.map(r => r[key]).filter(v => v !== undefined)
 
-        setChartOptions({
-          title: { text: sql || '查询结果', left: 'center' },
-          tooltip: { trigger: 'item' },
-          xAxis: { type: 'category', data: ['结果'] },
+        chartConfigs.bar = {
+          title: baseTitle,
+          tooltip: { trigger: 'axis' },
+          xAxis: { type: 'category', data: allLabels },
           yAxis: { type: 'value', name: '数值' },
           series: [{ name: key.replace('_', ' '), type: 'bar', data: allValues }]
-        })
-      } else {
-        setChartOptions({
-          title: { text: sql || '查询结果', left: 'center' },
+        }
+
+        chartConfigs.line = {
+          title: baseTitle,
           tooltip: { trigger: 'axis' },
-          xAxis: { type: 'category', data: parsedResult.map(r => r[keys[0]] || '') },
+          xAxis: { type: 'category', data: allLabels },
           yAxis: { type: 'value', name: '数值' },
-          series: keys.slice(1).map(k => ({
+          series: [{ name: key.replace('_', ' '), type: 'line', data: allValues }]
+        }
+
+        chartConfigs.pie = {
+          title: baseTitle,
+          tooltip: { trigger: 'item' },
+          legend: { bottom: 0 },
+          series: [{
+            name: key.replace('_', ' '),
+            type: 'pie',
+            radius: '50%',
+            data: parsedResult.map((r, i) => ({ value: r[key], name: allLabels[i] }))
+          }]
+        }
+      } else {
+        const xAxisData = parsedResult.map(r => String(r[labelKey] || ''))
+
+        chartConfigs.bar = {
+          title: baseTitle,
+          tooltip: { trigger: 'axis' },
+          legend: { data: valueKeys.map(k => k.replace('_', ' ')), bottom: 0 },
+          xAxis: { type: 'category', data: xAxisData },
+          yAxis: { type: 'value', name: '数值' },
+          series: valueKeys.map(k => ({
             name: k.replace('_', ' '),
             type: 'bar',
             data: parsedResult.map(r => r[k])
           }))
-        })
+        }
+
+        chartConfigs.line = {
+          title: baseTitle,
+          tooltip: { trigger: 'axis' },
+          legend: { data: valueKeys.map(k => k.replace('_', ' ')), bottom: 0 },
+          xAxis: { type: 'category', data: xAxisData },
+          yAxis: { type: 'value', name: '数值' },
+          series: valueKeys.map(k => ({
+            name: k.replace('_', ' '),
+            type: 'line',
+            data: parsedResult.map(r => r[k])
+          }))
+        }
+
+        chartConfigs.pie = {
+          title: { text: valueKeys[0].replace('_', ' '), left: 'center' },
+          tooltip: { trigger: 'item' },
+          legend: { bottom: 0 },
+          series: [{
+            name: valueKeys[0].replace('_', ' '),
+            type: 'pie',
+            radius: ['30%', '60%'],
+            data: parsedResult.map(r => ({ value: r[valueKeys[0]], name: String(r[labelKey] || '') }))
+          }]
+        }
       }
+
+      setChartConfigs(chartConfigs)
+      setChartOptions(chartConfigs.bar || chartConfigs.line)
       setChartData(parsedResult)
     } catch (err) {
       console.error('Chart update error:', err)

@@ -35,37 +35,37 @@ const DEMO_DATA = {
         { value: 1, name: 'Product C' }
       ]
     }]
-  },
-  scatter: {
-    title: { text: '价格与销量关系', left: 'center' },
-    tooltip: { trigger: 'item' },
-    xAxis: { type: 'value', name: '价格' },
-    yAxis: { type: 'value', name: '销量' },
-    series: [{
-      name: '产品',
-      type: 'scatter',
-      data: [[99.99, 5], [149.99, 1], [199.99, 1]]
-    }]
   }
 }
 
 function VisualizationPanel() {
-  const { chartType, chartData, chartOptions, setChartType, setChartOptions } = useChartStore()
+  const { chartType, chartData, chartOptions, chartConfigs, setChartType, setChartOptions } = useChartStore()
   const [localLoading, setLocalLoading] = useState(false)
 
-  const hasQueryData = chartOptions && typeof chartOptions === 'object' && Object.keys(chartOptions).length > 0
+  const hasQueryConfigs = chartConfigs && typeof chartConfigs === 'object' && Object.keys(chartConfigs).length > 0
 
-  const currentOption = hasQueryData ? chartOptions : (DEMO_DATA[chartType] || DEMO_DATA.bar)
+  const currentOption = hasQueryConfigs && chartConfigs[chartType]
+    ? chartConfigs[chartType]
+    : (chartOptions || DEMO_DATA[chartType] || DEMO_DATA.bar)
 
   const chartTypeLabels = {
     bar: '柱状图',
     line: '折线图',
-    pie: '饼图',
-    scatter: '散点图'
+    pie: '饼图'
   }
+
+  const chartOptionsList = hasQueryConfigs
+    ? Object.keys(chartConfigs).map(key => ({
+        value: key,
+        label: chartTypeLabels[key] || key
+      }))
+    : [{ value: 'bar', label: '柱状图' }, { value: 'line', label: '折线图' }, { value: 'pie', label: '饼图' }]
 
   const handleChartTypeChange = (value) => {
     setChartType(value)
+    if (hasQueryConfigs && chartConfigs[value]) {
+      setChartOptions(chartConfigs[value])
+    }
   }
 
   const handleRefresh = () => {
@@ -102,15 +102,10 @@ function VisualizationPanel() {
           value={chartType}
           onChange={handleChartTypeChange}
           style={{ width: 120 }}
-          options={[
-            { value: 'bar', label: '柱状图' },
-            { value: 'line', label: '折线图' },
-            { value: 'pie', label: '饼图' },
-            { value: 'scatter', label: '散点图' }
-          ]}
+          options={chartOptionsList}
         />
         <Select
-          value={hasQueryData ? 'query' : 'demo'}
+          value={hasQueryConfigs ? 'query' : 'demo'}
           style={{ width: 120 }}
           options={[
             { value: 'demo', label: '示例数据' },
@@ -140,7 +135,7 @@ function VisualizationPanel() {
           </div>
           <div className="info-row">
             <span className="info-label">数据来源：</span>
-            <span className="info-value">{hasQueryData ? '查询结果' : '示例数据'}</span>
+            <span className="info-value">{hasQueryConfigs ? '查询结果' : '示例数据'}</span>
           </div>
           {chartData && chartData.length > 0 && (
             <div className="info-row">
@@ -148,7 +143,7 @@ function VisualizationPanel() {
               <span className="info-value">{chartData.length}</span>
             </div>
           )}
-          {!hasQueryData && (
+          {!hasQueryConfigs && (
             <>
               <div className="info-row">
                 <span className="info-label">总销售额：</span>
@@ -164,7 +159,7 @@ function VisualizationPanel() {
       </div>
 
       <div className="chart-actions">
-        <Button type="primary" block disabled={!hasQueryData}>
+        <Button type="primary" block disabled={!hasQueryConfigs}>
           生成分析报告
         </Button>
       </div>
