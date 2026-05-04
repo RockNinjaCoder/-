@@ -42,3 +42,12 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Virtual Environment
+venv_new/
+backend/venv_new/
+
+# Tests (keep only essential test files)
+backend/test_*.py
+!backend/test_backend_module.py
+!backend/test_integration.py
