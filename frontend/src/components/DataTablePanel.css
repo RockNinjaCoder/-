@@ -1,0 +1,118 @@
+.data-table-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  background-color: #fff;
+}
+
+.data-table-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.data-table-panel .header-title {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.data-table-panel .header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.data-table-panel .header-actions .ant-btn {
+  border-radius: 6px;
+}
+
+.data-table-panel .sql-query-display {
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.data-table-panel .sql-query-display code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.data-table-panel .table-container {
+  flex: 1;
+  min-height: 200px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  overflow: auto;
+}
+
+.data-table-panel .table-container .ant-table {
+  background: #fff;
+  border-radius: 6px;
+}
+
+.data-table-panel .table-container .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.data-table-panel .table-container .ant-table-cell {
+  font-size: 13px;
+}
+
+.data-table-panel .table-empty,
+.data-table-panel .table-loading,
+.data-table-panel .table-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  min-height: 150px;
+}
+
+.data-table-panel .table-info {
+  margin-top: 12px;
+}
+
+.data-table-panel .table-info .ant-card {
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.data-table-panel .table-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.data-table-panel .table-info .info-row:not(:last-child) {
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.data-table-panel .table-info .info-label {
+  color: #666;
+}
+
+.data-table-panel .table-info .info-value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.data-table-panel .ant-pagination {
+  margin-top: 12px;
+}
+
+.data-table-panel .ant-empty-description {
+  color: #999;
+}

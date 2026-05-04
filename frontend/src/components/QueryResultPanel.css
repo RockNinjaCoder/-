@@ -1,0 +1,89 @@
+.query-result-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  background-color: #fff;
+}
+
+.query-result-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.query-result-panel .panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.query-result-panel .quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.query-result-panel .action-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.query-result-panel .sql-display {
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.query-result-panel .sql-display code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.query-result-panel .result-container {
+  flex: 1;
+  min-height: 150px;
+  overflow: auto;
+}
+
+.query-result-panel .result-container .ant-table {
+  font-size: 12px;
+}
+
+.query-result-panel .result-container .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+  padding: 8px;
+}
+
+.query-result-panel .result-container .ant-table-cell {
+  padding: 8px;
+}
+
+.query-result-panel .loading-state,
+.query-result-panel .error-state,
+.query-result-panel .empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  min-height: 120px;
+}
+
+.query-result-panel .result-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 12px;
+  color: #666;
+}

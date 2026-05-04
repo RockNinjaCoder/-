@@ -1,11 +1,21 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Any
-import json
+from typing import Optional, Any, Dict, List
+from datetime import datetime
+import uuid
 
 from app.core.db.connection import get_db
 
 router = APIRouter()
+
+_query_service_instance = None
+
+def get_query_service():
+    global _query_service_instance
+    if _query_service_instance is None:
+        from app.services.query_service import QueryService
+        _query_service_instance = QueryService()
+    return _query_service_instance
 
 
 class QueryRequest(BaseModel):
@@ -14,64 +24,106 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    id: str
+    success: bool
+    sql: Optional[str] = None
+    result: Optional[str] = None
     session_id: str
     user_query: str
-    generated_sql: Optional[str]
-    execution_result: Optional[str]
-    status: str
-    error_message: Optional[str] = None
+    error: Optional[str] = None
+    corrected: Optional[bool] = None
+
+
+class SchemaColumn(BaseModel):
+    column_name: str
+    column_type: str
+    description: Optional[str] = ""
 
 
 @router.post("", response_model=QueryResponse)
-async def execute_query(request: QueryRequest):
+async def execute_nl2sql_query(request: QueryRequest):
+    query_service = get_query_service()
+    result = await query_service.execute_natural_language_query(
+        session_id=request.session_id,
+        user_query=request.query
+    )
+
     return QueryResponse(
-        id="temp-id",
+        success=result.get("success", False),
+        sql=result.get("sql"),
+        result=result.get("result"),
         session_id=request.session_id,
         user_query=request.query,
-        generated_sql=None,
-        execution_result=None,
-        status="pending"
+        error=result.get("error"),
+        corrected=result.get("corrected")
     )
+
+
+@router.get("/history/{session_id}")
+async def get_query_history(session_id: str, limit: int = 20):
+    query_service = get_query_service()
+    history = await query_service.get_query_history(session_id, limit)
+    return {"session_id": session_id, "history": history}
 
 
 @router.get("/schemas")
 async def get_schemas():
-    conn = await get_db()
-    cursor = await conn.execute(
-        "SELECT id, table_name, column_name, column_type, description FROM db_schemas"
-    )
-    rows = await cursor.fetchall()
-
-    schemas = {}
-    for row in rows:
-        table_name = row["table_name"]
-        if table_name not in schemas:
-            schemas[table_name] = []
-        schemas[table_name].append({
-            "column_name": row["column_name"],
-            "column_type": row["column_type"],
-            "description": row["description"]
-        })
-
+    query_service = get_query_service()
+    schemas = await query_service.get_schemas()
     return schemas
 
 
+class SchemaRegisterRequest(BaseModel):
+    table_name: str
+    columns: List[Dict[str, str]]
+    session_id: Optional[str] = None
+
+
 @router.post("/schemas/register")
-async def register_schema(table_name: str, columns: list[dict]):
-    import uuid
-    now = datetime.now().isoformat()
-    conn = await get_db()
-
-    for col in columns:
-        schema_id = str(uuid.uuid4())
-        await conn.execute(
-            "INSERT INTO db_schemas (id, table_name, column_name, column_type, description, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (schema_id, table_name, col["column_name"], col.get("column_type", "TEXT"), col.get("description", ""), now)
-        )
-
-    await conn.commit()
-    return {"message": "Schema registered successfully"}
+async def register_schema(request: SchemaRegisterRequest):
+    query_service = get_query_service()
+    result = await query_service.register_schema(request.table_name, request.columns)
+    return result
 
 
-from datetime import datetime
+@router.get("/sql/validate")
+async def validate_sql(sql: str):
+    from app.core.db.executor import query_executor
+    is_valid, error_msg = query_executor.validate_sql(sql)
+    return {"valid": is_valid, "error": error_msg}
+
+
+@router.post("/sql/execute")
+async def execute_sql_direct(session_id: str, sql: str):
+    query_service = get_query_service()
+    result = await query_service.execute_sql_direct(session_id, sql)
+    return result
+
+
+class ChartConfigRequest(BaseModel):
+    session_id: str
+    query: str
+    result: List[Dict[str, Any]]
+    chart_type: Optional[str] = None
+    x_axis_column: Optional[str] = None
+    y_axis_column: Optional[str] = None
+
+
+@router.post("/chart/config")
+async def generate_chart_config(request: ChartConfigRequest):
+    from app.services.visualization_service import VisualizationService
+
+    viz_service = VisualizationService()
+    config = viz_service.generate_chart_config(
+        data=request.result,
+        chart_type=request.chart_type,
+        title=request.query,
+        x_axis_column=request.x_axis_column,
+        y_axis_column=request.y_axis_column
+    )
+
+    return {
+        "success": True,
+        "chart_type": config.get("chart_type", "line"),
+        "config": config,
+        "data": request.result
+    }

@@ -21,17 +21,32 @@
 }
 
 .visualization {
-  width: 400px;
-  min-width: 400px;
+  width: 500px;
+  min-width: 500px;
   height: 100%;
   border-left: 1px solid var(--border-color);
-  background-color: #fff;
+  background-color: #fafafa;
+  display: flex;
+  flex-direction: column;
+}
+
+.visualization .visualization-panel {
+  flex: 1;
+  min-height: 50%;
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.visualization .data-table-panel {
+  flex: 1;
+  min-height: 50%;
+  overflow: hidden;
 }
 
 @media (max-width: 1200px) {
   .visualization {
-    width: 350px;
-    min-width: 350px;
+    width: 420px;
+    min-width: 420px;
   }
 }
 
@@ -41,7 +56,7 @@
     min-width: 200px;
   }
   .visualization {
-    width: 300px;
-    min-width: 300px;
+    width: 320px;
+    min-width: 320px;
   }
 }

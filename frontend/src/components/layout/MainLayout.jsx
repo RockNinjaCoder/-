@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import ChatSidebar from '../ChatSidebar'
 import ChatArea from '../ChatArea'
 import VisualizationPanel from '../VisualizationPanel'
+import DataTablePanel from '../DataTablePanel'
 import useSessionStore from '../../store/sessionStore'
 import './MainLayout.css'
 
@@ -22,6 +23,7 @@ function MainLayout() {
       </div>
       <div className="visualization">
         <VisualizationPanel />
+        <DataTablePanel />
       </div>
     </div>
   )

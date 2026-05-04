@@ -22,15 +22,31 @@ export const executeQuery = async (sessionId, query) => {
   return response.data
 }
 
+export const getQueryHistory = async (sessionId, limit = 20) => {
+  const response = await queryApi.get(`/history/${sessionId}?limit=${limit}`)
+  return response.data
+}
+
 export const getSchemas = async () => {
   const response = await queryApi.get('/schemas')
   return response.data
 }
 
 export const registerSchema = async (tableName, columns) => {
-  const response = await queryApi.post('/schemas/register', null, {
-    params: { table_name: tableName }
+  const response = await queryApi.post('/schemas/register', {
+    table_name: tableName,
+    columns: columns
   })
+  return response.data
+}
+
+export const validateSql = async (sql) => {
+  const response = await queryApi.get('/sql/validate', { params: { sql } })
+  return response.data
+}
+
+export const executeSqlDirect = async (sessionId, sql) => {
+  const response = await queryApi.post('/sql/execute', { session_id: sessionId, sql })
   return response.data
 }
 
