@@ -13,9 +13,13 @@ const useChatStore = create((set, get) => ({
   })),
 
   updateMessage: (messageId, updates) => set((state) => ({
-    messages: state.messages.map(m =>
-      m.id === messageId ? { ...m, ...updates } : m
-    )
+    messages: state.messages.map(m => {
+      if (m.id !== messageId) return m
+      if (typeof updates === 'function') {
+        return updates(m)
+      }
+      return { ...m, ...updates }
+    })
   })),
 
   clearMessages: () => set({ messages: [] }),
